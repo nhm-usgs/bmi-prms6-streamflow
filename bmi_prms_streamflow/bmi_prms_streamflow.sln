@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.902
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "bmi_prms_streamflow", "bmi_prms_streamflow\bmi_prms_streamflow.vfproj", "{410506C6-2741-4C35-98EF-B4F76DB3F094}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{410506C6-2741-4C35-98EF-B4F76DB3F094}.Debug|x86.ActiveCfg = Debug|Win32
+		{410506C6-2741-4C35-98EF-B4F76DB3F094}.Debug|x86.Build.0 = Debug|Win32
+		{410506C6-2741-4C35-98EF-B4F76DB3F094}.Release|x86.ActiveCfg = Release|Win32
+		{410506C6-2741-4C35-98EF-B4F76DB3F094}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A2C22B85-31FB-4425-B1FA-FF6FB5193232}
+	EndGlobalSection
+EndGlobal
