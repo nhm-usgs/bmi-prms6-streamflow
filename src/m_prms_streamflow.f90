@@ -1,4 +1,4 @@
-    module m_prms_surface
+    module m_prms_streamflow
     use variableKind
     use prms_constants
     ! use, intrinsic :: iso_c_binding, only: c_sizeof
@@ -9,7 +9,7 @@
     ! use ieee_arithmetic
     ! use ieee_features
     implicit none
-    type :: prms_surface_model
+    type :: prms_streamflow_model
         character(len=:), allocatable :: control_filename
         !! Name of the control file
         type(Control) :: control_data
@@ -35,7 +35,7 @@
         !! Ending cpu time value
         real(r64) :: dummy_r64
         real(r32) :: dummy_r32
-    end type prms_surface_model
+    end type prms_streamflow_model
 
     contains
 
@@ -48,7 +48,7 @@
     use, intrinsic :: iso_fortran_env, only: output_unit
     implicit none
     character (len=*), intent(in) :: config_file
-    type(prms_surface_model), target, intent(out) :: model
+    type(prms_streamflow_model), target, intent(out) :: model
     real(r64) :: dummy_r64
     real(r32) :: dummy_r32
     associate(start_rtc => model%start_rtc, end_rtc => model%end_rtc, max_rtc => model%max_rtc, &
@@ -105,7 +105,7 @@
     subroutine cleanup(model)
     use, intrinsic :: iso_fortran_env, only: output_unit
     implicit none
-    type(prms_surface_model), intent(inout) :: model
+    type(prms_streamflow_model), intent(inout) :: model
     associate(start_rtc => model%start_rtc, end_rtc => model%end_rtc, max_rtc => model%max_rtc, &
         rate_rtc => model%rate_rtc, delta_rtc_sec => model%delta_rtc_sec,  &
         start_ct => model%start_ct, end_ct => model%end_ct, &
@@ -134,7 +134,7 @@
 
     subroutine advance_in_time(model)
     implicit none
-    type(prms_surface_model), intent(inout) :: model
+    type(prms_streamflow_model), intent(inout) :: model
     type(Control) :: ctl_data
     type(Simulation) :: this
     logical :: res
@@ -155,7 +155,7 @@
     subroutine solve_prms(model)
     use iso_fortran_env, only: output_unit
     implicit none
-    type(prms_surface_model), intent(inout) :: model
+    type(prms_streamflow_model), intent(inout) :: model
     !! Name of the control file
     type(Control) :: ctl_data
     !! Class of control file related parameters
@@ -215,4 +215,4 @@
         endif
         end associate
     end subroutine solve_prms
-    end module m_prms_surface
+    end module m_prms_streamflow
