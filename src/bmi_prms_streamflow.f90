@@ -84,7 +84,7 @@
 
     ! Exchange items
     integer, parameter :: input_item_count = 6
-    integer, parameter :: output_item_count = 0
+    integer, parameter :: output_item_count = 6
     character (len=BMI_MAX_VAR_NAME), target, &
         dimension(input_item_count) :: input_items
     character (len=BMI_MAX_VAR_NAME), target, &
@@ -148,6 +148,12 @@
     character (*), pointer, intent(out) :: names(:)
     integer :: bmi_status
     ! vars by nhru            
+    output_items(1) = 'flow_out' !r64
+    output_items(2) = 'hru_outflow' !r64
+    output_items(3) = 'seg_gwflow' !r64
+    output_items(4) = 'seg_sroff' !r64
+    output_items(5) = 'seg_ssflow' !r64
+    output_items(6) = 'seg_lateral_inflow'  !r64
     
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -266,12 +272,15 @@
     integer :: bmi_status
 
     select case(name)
-    case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff' )
+    case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff', &
+        'hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow')
         grid = 0
         bmi_status = BMI_SUCCESS
     case('strm_seg_in')
         grid = 1
         bmi_status = BMI_SUCCESS
+    case('flow_out')
+        grid = 2
     case default
         grid = -1
         bmi_status = BMI_FAILURE
@@ -292,6 +301,9 @@
     case(1)
         type = "vector"
         bmi_status = BMI_SUCCESS
+    case(2)
+        type = 'scalar'
+        bmi_status = BMI_SUCCESS
     case default
         type = "-"
         bmi_status = BMI_FAILURE
@@ -310,6 +322,9 @@
         rank = 1
         bmi_status = BMI_SUCCESS
     case(1)
+        rank = 1
+        bmi_status = BMI_SUCCESS
+    case(2)
         rank = 1
         bmi_status = BMI_SUCCESS
     case default
@@ -348,6 +363,9 @@
         bmi_status = BMI_SUCCESS
     case(1)
         size = this%model%model_simulation%model_basin%nsegment
+        bmi_status = BMI_SUCCESS
+    case(2)
+        size = 1
         bmi_status = BMI_SUCCESS
     case default
         size = -1
@@ -451,7 +469,7 @@
     case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff')
         type = "real"
         bmi_status = BMI_SUCCESS
-    case("seg_inflow")
+    case('seg_inflow','hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'flow_out')
         type = "double"
         bmi_status = BMI_SUCCESS
     case default
@@ -468,10 +486,10 @@
     integer :: bmi_status
 
     select case(name)
-    case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff')
+    case('potet', 'swrad', 'gwres_flow', 'ssres_flow', 'sroff')
         units = "in"
         bmi_status = BMI_SUCCESS
-    case('strm_seg_in')
+    case('strm_seg_in','hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'flow_out')
         units = "ft3 s-1"
         bmi_status = BMI_SUCCESS
     case default
@@ -508,6 +526,24 @@
         bmi_status = BMI_SUCCESS
     case('strm_seg_in')
         size = sizeof(this%model%model_simulation%runoff%strm_seg_in)
+        bmi_status = BMI_SUCCESS
+    case('hru_outflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%hru_outflow)
+        bmi_status = BMI_SUCCESS
+    case('seg_gwflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_gwflow)
+        bmi_status = BMI_SUCCESS
+    case('seg_sroff')
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_sroff)
+        bmi_status = BMI_SUCCESS
+    case('seg_ssflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_ssflow)
+        bmi_status = BMI_SUCCESS
+    case('seg_lateral_inflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_lateral_inflow)
+        bmi_status = BMI_SUCCESS
+    case('flow_out')
+        size = sizeof(this%model%model_simulation%model_streamflow%flow_out)
         bmi_status = BMI_SUCCESS
     case default
         size = -1
@@ -607,8 +643,23 @@
 
     select case(name)
 
-    case('strm_seg_in')
-        dest = [this%model%model_simulation%runoff%strm_seg_in]
+    case('hru_outflow')
+        dest = [this%model%model_simulation%model_streamflow%hru_outflow]
+        bmi_status = BMI_SUCCESS
+    case('seg_gwflow')
+        dest = [this%model%model_simulation%model_streamflow%seg_gwflow]
+        bmi_status = BMI_SUCCESS
+    case('seg_sroff')
+        dest = [this%model%model_simulation%model_streamflow%seg_sroff]
+        bmi_status = BMI_SUCCESS
+    case('seg_ssflow')
+        dest = [this%model%model_simulation%model_streamflow%seg_ssflow]
+        bmi_status = BMI_SUCCESS
+    case('seg_lateral_inflow')
+        dest = [this%model%model_simulation%model_streamflow%seg_lateral_inflow]
+        bmi_status = BMI_SUCCESS
+    case('flow_out')
+        dest = [this%model%model_simulation%model_streamflow%flow_out]
         bmi_status = BMI_SUCCESS
     case default
         dest = [-1.d0]
@@ -674,12 +725,43 @@
     integer :: n_elements, status, gridid
 
     select case(name)
-    case('strm_seg_in')
-        src = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+    case('hru_outflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%hru_outflow(1))
         status = this%get_var_grid(name,gridid)
         status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, dest_ptr, [n_elements])
         bmi_status = BMI_SUCCESS
+        bmi_status = BMI_FAILURE
+    case('seg_gwflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_gwflow(1))
+        status = this%get_var_grid(name,gridid)
+        status = this%get_grid_size(gridid, n_elements)
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+        bmi_status = BMI_FAILURE
+    case('seg_sroff')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_sroff(1))
+        status = this%get_var_grid(name,gridid)
+        status = this%get_grid_size(gridid, n_elements)
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+        bmi_status = BMI_FAILURE
+    case('seg_ssflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_ssflow(1))
+        status = this%get_var_grid(name,gridid)
+        status = this%get_grid_size(gridid, n_elements)
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+        bmi_status = BMI_FAILURE
+    case('seg_lateral_inflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_lateral_inflow(1))
+        status = this%get_var_grid(name,gridid)
+        status = this%get_grid_size(gridid, n_elements)
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+        bmi_status = BMI_FAILURE
+
+    case default
         bmi_status = BMI_FAILURE
     end select
     end function prms_get_ptr_double
@@ -706,43 +788,7 @@
     !        dest(i) = src_flattened(inds(i))
     !    end do
     !    bmi_status = BMI_SUCCESS
-    case('hru_type')
-        src = c_loc(this%model%model_simulation%model_basin%hru_type(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
-        call c_f_pointer(src, src_flattened, [n_elements])
-        do i = 1, size(inds)
-            dest(i) = src_flattened(inds(i))
-        end do
-        bmi_status = BMI_SUCCESS
-    case('hru_route_order')
-        src = c_loc(this%model%model_simulation%model_basin%hru_route_order(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
-        call c_f_pointer(src, src_flattened, [n_elements])
-        do i = 1,  size(inds)
-            dest(i) = src_flattened(inds(i))
-        end do
-        bmi_status = BMI_SUCCESS
-    case('transp_on')
-        src = c_loc(this%model%model_simulation%transpiration%transp_on(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
-        call c_f_pointer(src, src_flattened, [n_elements])
-        do i = 1,  size(inds)
-            dest(i) = src_flattened(inds(i))
-        end do
-        bmi_status = BMI_SUCCESS
-    case('active_mask')
-        src = c_loc(this%model%model_simulation%model_basin%active_mask(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
-        call c_f_pointer(src, src_flattened, [n_elements])
-        do i = 1,  size(inds)
-            dest(i) = src_flattened(inds(i))
-        end do
-        bmi_status = BMI_SUCCESS
-        case default
+    case default
         bmi_status = BMI_FAILURE
     end select
     end function prms_get_at_indices_int
@@ -795,8 +841,8 @@
     integer :: i, n_elements, status, gridid
 
     select case(name)
-    case('strm_seg_in')
-        src = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+    case('hru_outflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%hru_outflow(1))
         status = this%get_var_grid(name,gridid)
         status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, src_flattened, [n_elements])
@@ -804,6 +850,43 @@
             dest(i) = src_flattened(inds(i))
         end do
         bmi_status = BMI_SUCCESS
+    case('seg_gwflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_gwflow(1))
+        status = this%get_var_grid(name,gridid)
+        status = this%get_grid_size(gridid, n_elements)
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seg_sroff')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_sroff(1))
+        status = this%get_var_grid(name,gridid)
+        status = this%get_grid_size(gridid, n_elements)
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seg_ssflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_ssflow(1))
+        status = this%get_var_grid(name,gridid)
+        status = this%get_grid_size(gridid, n_elements)
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seg_lateral_inflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_lateral_inflow(1))
+        status = this%get_var_grid(name,gridid)
+        status = this%get_grid_size(gridid, n_elements)
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -836,6 +919,22 @@
     !case('dprst_evap_hru')
     !    this%model%model_simulation%runoff%dprst_evap_hru = src
     !    bmi_status = BMI_SUCCESS
+    case('potet')
+        this%model%model_simulation%potet%potet = src
+        bmi_status = BMI_SUCCESS
+    case('swrad')
+        this%model%model_simulation%solrad%swrad = src
+        bmi_status = BMI_SUCCESS
+    case('gwres_flow')
+        this%model%model_simulation%groundwater%gwres_flow = src
+        bmi_status = BMI_SUCCESS
+    case('ssres_flow')
+        this%model%model_simulation%soil%ssres_flow = src
+        bmi_status = BMI_SUCCESS
+    case('sroff')
+        this%model%model_simulation%runoff%sroff = src
+        bmi_status = BMI_SUCCESS
+
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -857,7 +956,7 @@
     end select
     end function prms_set_double
     !
-    !! Set integer values at particular locations.
+    ! Set integer values at particular locations.
     !function prms_set_at_indices_int(this, name, indices, src) &
     !     result (bmi_status)
     !  class (bmi_prms_streamflow), intent(inout) :: this
@@ -888,9 +987,9 @@
     !  integer :: i
     !
     !  select case(name)
-    !  case("plate_surface__temperature")
-    !     dest = c_loc(this%model%temperature(1,1))
-    !     call c_f_pointer(dest, dest_flattened, [this%model%n_y * this%model%n_x])
+    !  case("potet")
+    !     dest = c_loc(this%model%model_simulation%potet%potet(1))
+    !     call c_f_pointer(dest, dest_flattened, [this%model%model_simulation%model_basin%nhru])
     !     do i = 1, size(indices)
     !        dest_flattened(indices(i)) = src(i)
     !     end do
@@ -917,8 +1016,8 @@
     !     bmi_status = BMI_FAILURE
     !  end select
     !end function prms_set_at_indices_double
-    !
-    !! A non-BMI procedure for model introspection.
+    
+    ! A non-BMI procedure for model introspection.
     !subroutine print_model_info(this)
     !  class (bmi_prms_streamflow), intent(in) :: this
     !
