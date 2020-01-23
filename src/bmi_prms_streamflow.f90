@@ -84,11 +84,48 @@
 
     ! Exchange items
     integer, parameter :: input_item_count = 6
-    integer, parameter :: output_item_count = 6
+    integer, parameter :: output_item_count = 16
     character (len=BMI_MAX_VAR_NAME), target, &
-        dimension(input_item_count) :: input_items
+        dimension(input_item_count) :: input_items = (/ &
+            
+    ! input vars from surface soil and groundwater required to run
+    ! stream flow
+    ! from potet
+    'potet', &
+    ! from solrad
+    'swrad', &
+    ! from groundwater
+    'gwres_flow', &
+    ! from soil
+    'ssres_flow', &
+    ! from runoff
+    'sroff', &
+    'strm_seg_in' &
+    /)
+
     character (len=BMI_MAX_VAR_NAME), target, &
-        dimension(output_item_count) :: output_items 
+        dimension(output_item_count) :: output_items  = (/ &
+        ! A list of potential ouputs needs more work once other streamflow 
+        ! modules are added to prms6
+    'flow_out', & !r64 by nhru
+    'hru_outflow', & !r64 by nhru
+    'seg_gwflow', & !r64 by nsegment
+    'seg_sroff', & !r64 by nsegment
+    'seg_ssflow', & !r64 by nsegment
+    'seg_lateral_inflow', &  !r64 by nsegment
+    'segment_order', & ! i32 by nsegment
+    'segment_up', & !i32 by nsegment
+    'seg_inflow', & !r64 by nsegment
+    'seg_outflow', & !r64 by nsegment
+    'seg_upstream_inflow', & !r64 by nsegment
+    'seginc_gwflow', &  !r64 by nsegment
+    'seginc_sroff', & !r64 by nsegment
+    'seginc_ssflow', & !r64 by nsegment
+    'seginc_swrad', & !r64 by nsegment
+    'segment_delta_flow' & !r64 by nsegment
+    /)
+    
+
 
     contains
 
@@ -127,17 +164,6 @@
     class (bmi_prms_streamflow), intent(in) :: this
     character (*), pointer, intent(out) :: names(:)
     integer :: bmi_status
-    ! from potet
-    input_items(1) = 'potet'
-    ! from solrad
-    input_items(2) = 'swrad'
-    ! from groundwater
-    input_items(3) = 'gwres_flow'
-    ! from soil
-    input_items(4) = 'ssres_flow'
-    ! from runoff
-    input_items(5) = 'sroff'
-    input_items(6) = 'strm_seg_in'
     names => input_items
     bmi_status = BMI_SUCCESS
     end function prms_input_var_names
@@ -147,14 +173,7 @@
     class (bmi_prms_streamflow), intent(in) :: this
     character (*), pointer, intent(out) :: names(:)
     integer :: bmi_status
-    ! vars by nhru            
-    output_items(1) = 'flow_out' !r64
-    output_items(2) = 'hru_outflow' !r64
-    output_items(3) = 'seg_gwflow' !r64
-    output_items(4) = 'seg_sroff' !r64
-    output_items(5) = 'seg_ssflow' !r64
-    output_items(6) = 'seg_lateral_inflow'  !r64
-    
+    ! vars by nhru                
     names => output_items
     bmi_status = BMI_SUCCESS
     end function prms_output_var_names
@@ -273,10 +292,13 @@
 
     select case(name)
     case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff', &
-        'hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow')
+        'hru_outflow')
         grid = 0
         bmi_status = BMI_SUCCESS
-    case('strm_seg_in')
+    case('strm_seg_in', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', &
+        'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', &
+        'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', &
+        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow')
         grid = 1
         bmi_status = BMI_SUCCESS
     case('flow_out')
@@ -469,8 +491,13 @@
     case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff')
         type = "real"
         bmi_status = BMI_SUCCESS
-    case('seg_inflow','hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'flow_out')
+    case('flow_out', 'hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'seg_lateral_inflow', &
+            'seg_inflow','seg_outflow', 'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', &
+            'seginc_ssflow', 'seginc_swrad', 'sement_delta_flow')
         type = "double"
+        bmi_status = BMI_SUCCESS
+    case('segment_order', 'segment_up')
+        type='integer'
         bmi_status = BMI_SUCCESS
     case default
         type = "-"
@@ -486,11 +513,17 @@
     integer :: bmi_status
 
     select case(name)
-    case('potet', 'swrad', 'gwres_flow', 'ssres_flow', 'sroff')
+    case('potet', 'swrad', 'gwres_flow', 'ssres_flow', 'sroff', &
+        'seg_gwflow', 'seg_sroff', 'seg_ssflow')
         units = "in"
         bmi_status = BMI_SUCCESS
-    case('strm_seg_in','hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'flow_out')
+    case('strm_seg_in', 'flow_out', &
+        'hru_outflow', 'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', 'seg_upstream_inflow', &
+        'seginc_gwflow', 'seginc_sroff', 'seginc_ssflow', 'segment_delta_flow')
         units = "ft3 s-1"
+        bmi_status = BMI_SUCCESS
+    case('seginc')
+        units = 'Ly'
         bmi_status = BMI_SUCCESS
     case default
         units = "-"
@@ -545,6 +578,37 @@
     case('flow_out')
         size = sizeof(this%model%model_simulation%model_streamflow%flow_out)
         bmi_status = BMI_SUCCESS
+    case('segment_order')
+        size = sizeof(this%model%model_simulation%model_streamflow%segment_order)
+        bmi_status = BMI_SUCCESS
+    case('segment_up')
+        size = sizeof(this%model%model_simulation%model_streamflow%segment_up)
+        bmi_status = BMI_SUCCESS
+    case('seg_inflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_inflow)
+        bmi_status = BMI_SUCCESS
+    case('seg_outflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_outflow)
+        bmi_status = BMI_SUCCESS
+    case('seg_upstream_inflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_upstream_inflow)
+        bmi_status = BMI_SUCCESS
+    case('seginc_gwflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%seginc_gwflow)
+        bmi_status = BMI_SUCCESS
+    case('seginc_sroff')
+        size = sizeof(this%model%model_simulation%model_streamflow%seginc_sroff)
+        bmi_status = BMI_SUCCESS
+    case('seginc_ssflow')
+        size = sizeof(this%model%model_simulation%model_streamflow%seginc_ssflow)
+        bmi_status = BMI_SUCCESS
+    case('seginc_swrad')
+        size = sizeof(this%model%model_simulation%model_streamflow%seginc_swrad)
+        bmi_status = BMI_SUCCESS
+    case('segment_delta_flow' )
+        size = sizeof(this%model%model_simulation%model_streamflow%segment_delta_flow)
+        bmi_status = BMI_SUCCESS
+
     case default
         size = -1
         bmi_status = BMI_FAILURE
@@ -594,6 +658,12 @@
     integer :: bmi_status
 
     select case(name)
+    case('segment_order')
+        dest = [this%model%model_simulation%model_streamflow%segment_order]
+        bmi_status = BMI_SUCCESS
+    case('segment_up')
+        dest = [this%model%model_simulation%model_streamflow%segment_up]
+        bmi_status = BMI_SUCCESS
     case default
         dest = [-1]
         bmi_status = BMI_FAILURE
@@ -661,6 +731,31 @@
     case('flow_out')
         dest = [this%model%model_simulation%model_streamflow%flow_out]
         bmi_status = BMI_SUCCESS
+    case('seg_inflow')
+        dest = [this%model%model_simulation%model_streamflow%seg_inflow]
+        bmi_status = BMI_SUCCESS
+    case('seg_outflow')
+        dest = [this%model%model_simulation%model_streamflow%seg_outflow]
+        bmi_status = BMI_SUCCESS
+    case('seg_upstream_inflow')
+        dest = [this%model%model_simulation%model_streamflow%seg_upstream_inflow]
+        bmi_status = BMI_SUCCESS
+    case('seginc_gwflow')
+        dest = [this%model%model_simulation%model_streamflow%seginc_gwflow]
+        bmi_status = BMI_SUCCESS
+    case('seginc_sroff')
+        dest = [this%model%model_simulation%model_streamflow%seginc_sroff]
+        bmi_status = BMI_SUCCESS
+    case('seginc_ssflow')
+        dest = [this%model%model_simulation%model_streamflow%seginc_ssflow]
+        bmi_status = BMI_SUCCESS
+    case('seginc_swrad')
+        dest = [this%model%model_simulation%model_streamflow%seginc_swrad]
+        bmi_status = BMI_SUCCESS
+    case('segment_delta_flow') 
+        dest = [this%model%model_simulation%model_streamflow%segment_delta_flow]
+        bmi_status = BMI_SUCCESS
+
     case default
         dest = [-1.d0]
         bmi_status = BMI_FAILURE
@@ -723,44 +818,64 @@
     integer :: bmi_status
     type (c_ptr) :: src
     integer :: n_elements, status, gridid
+        
+    status = this%get_var_grid(name,gridid)
+        
+    status = this%get_grid_size(gridid, n_elements)
 
     select case(name)
     case('hru_outflow')
         src = c_loc(this%model%model_simulation%model_streamflow%hru_outflow(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, dest_ptr, [n_elements])
         bmi_status = BMI_SUCCESS
-        bmi_status = BMI_FAILURE
     case('seg_gwflow')
         src = c_loc(this%model%model_simulation%model_streamflow%seg_gwflow(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, dest_ptr, [n_elements])
         bmi_status = BMI_SUCCESS
-        bmi_status = BMI_FAILURE
     case('seg_sroff')
         src = c_loc(this%model%model_simulation%model_streamflow%seg_sroff(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, dest_ptr, [n_elements])
         bmi_status = BMI_SUCCESS
-        bmi_status = BMI_FAILURE
     case('seg_ssflow')
         src = c_loc(this%model%model_simulation%model_streamflow%seg_ssflow(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, dest_ptr, [n_elements])
         bmi_status = BMI_SUCCESS
-        bmi_status = BMI_FAILURE
     case('seg_lateral_inflow')
         src = c_loc(this%model%model_simulation%model_streamflow%seg_lateral_inflow(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, dest_ptr, [n_elements])
         bmi_status = BMI_SUCCESS
-        bmi_status = BMI_FAILURE
-
+    case('seg_inflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_inflow(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+    case('seg_outflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_outflow(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+    case('seg_upstream_inflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_upstream_inflow(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+    case('seginc_gwflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seginc_gwflow(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+    case('seginc_sroff')
+        src = c_loc(this%model%model_simulation%model_streamflow%seginc_sroff(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+    case('seginc_ssflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seginc_ssflow(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+    case('seginc_swrad')
+        src = c_loc(this%model%model_simulation%model_streamflow%seginc_swrad(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
+    case('segment_delta_flow') 
+        src = c_loc(this%model%model_simulation%model_streamflow%segment_delta_flow(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+        bmi_status = BMI_SUCCESS
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -839,12 +954,13 @@
     type (c_ptr) src
     double precision, pointer :: src_flattened(:)
     integer :: i, n_elements, status, gridid
+        
+    status = this%get_var_grid(name,gridid)
+    status = this%get_grid_size(gridid, n_elements)
 
     select case(name)
     case('hru_outflow')
         src = c_loc(this%model%model_simulation%model_streamflow%hru_outflow(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, src_flattened, [n_elements])
         do i = 1,  size(inds)
             dest(i) = src_flattened(inds(i))
@@ -852,8 +968,6 @@
         bmi_status = BMI_SUCCESS
     case('seg_gwflow')
         src = c_loc(this%model%model_simulation%model_streamflow%seg_gwflow(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, src_flattened, [n_elements])
         do i = 1,  size(inds)
             dest(i) = src_flattened(inds(i))
@@ -861,8 +975,6 @@
         bmi_status = BMI_SUCCESS
     case('seg_sroff')
         src = c_loc(this%model%model_simulation%model_streamflow%seg_sroff(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, src_flattened, [n_elements])
         do i = 1,  size(inds)
             dest(i) = src_flattened(inds(i))
@@ -870,8 +982,6 @@
         bmi_status = BMI_SUCCESS
     case('seg_ssflow')
         src = c_loc(this%model%model_simulation%model_streamflow%seg_ssflow(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, src_flattened, [n_elements])
         do i = 1,  size(inds)
             dest(i) = src_flattened(inds(i))
@@ -879,14 +989,67 @@
         bmi_status = BMI_SUCCESS
     case('seg_lateral_inflow')
         src = c_loc(this%model%model_simulation%model_streamflow%seg_lateral_inflow(1))
-        status = this%get_var_grid(name,gridid)
-        status = this%get_grid_size(gridid, n_elements)
         call c_f_pointer(src, src_flattened, [n_elements])
         do i = 1,  size(inds)
             dest(i) = src_flattened(inds(i))
         end do
         bmi_status = BMI_SUCCESS
-
+    case('seg_inflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_inflow(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seg_outflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_outflow(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seg_upstream_inflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seg_upstream_inflow(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seginc_gwflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seginc_gwflow(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seginc_sroff')
+        src = c_loc(this%model%model_simulation%model_streamflow%seginc_sroff(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seginc_ssflow')
+        src = c_loc(this%model%model_simulation%model_streamflow%seginc_ssflow(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('seginc_swrad')
+        src = c_loc(this%model%model_simulation%model_streamflow%seginc_swrad(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
+    case('segment_delta_flow') 
+        src = c_loc(this%model%model_simulation%model_streamflow%segment_delta_flow(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+        bmi_status = BMI_SUCCESS
     case default
         bmi_status = BMI_FAILURE
     end select
