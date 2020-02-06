@@ -6,6 +6,7 @@
     use Control_class, only: Control
     use Simulation_class, only: Simulation
     use PRMS_BASIN, only: Basin
+    use PRMS_MUSKINGUM, only: Muskingum
     ! use ieee_arithmetic
     ! use ieee_features
     implicit none

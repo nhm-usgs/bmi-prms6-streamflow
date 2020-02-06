@@ -66,13 +66,13 @@
          set_value_int, &
          set_value_float, &
          set_value_double
-    !procedure :: set_value_at_indices_int => prms_set_at_indices_int
-    !procedure :: set_value_at_indices_float => prms_set_at_indices_float
-    !procedure :: set_value_at_indices_double => prms_set_at_indices_double
-    !generic :: set_value_at_indices => &
-    !     set_value_at_indices_int, &
-    !     set_value_at_indices_float, &
-    !     set_value_at_indices_double
+    procedure :: set_value_at_indices_int => prms_set_at_indices_int
+    procedure :: set_value_at_indices_float => prms_set_at_indices_float
+    procedure :: set_value_at_indices_double => prms_set_at_indices_double
+    generic :: set_value_at_indices => &
+         set_value_at_indices_int, &
+         set_value_at_indices_float, &
+         set_value_at_indices_double
     !procedure :: print_model_info
     end type bmi_prms_streamflow
 
@@ -83,7 +83,7 @@
         component_name = "prms6-BMI"
 
     ! Exchange items
-    integer, parameter :: input_item_count = 6
+    integer, parameter :: input_item_count = 8
     integer, parameter :: output_item_count = 16
     character (len=BMI_MAX_VAR_NAME), target, &
         dimension(input_item_count) :: input_items = (/ &
@@ -100,7 +100,11 @@
     'ssres_flow', &
     ! from runoff
     'sroff', &
-    'strm_seg_in' &
+    'strm_seg_in', &
+        
+    ! for calibration
+    'k_coef', & !r32 by nsegment
+    'x_coef' & ! r32 by nhru
     /)
 
     character (len=BMI_MAX_VAR_NAME), target, &
@@ -292,13 +296,13 @@
 
     select case(name)
     case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff', &
-        'hru_outflow')
+        'hru_outflow', 'x_coef')
         grid = 0
         bmi_status = BMI_SUCCESS
     case('strm_seg_in', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', &
         'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', &
         'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', &
-        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow')
+        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow', 'k_coef')
         grid = 1
         bmi_status = BMI_SUCCESS
     case('flow_out')
@@ -488,7 +492,7 @@
     integer :: bmi_status
 
     select case(name)
-    case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff')
+    case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff', 'k_coef', 'x_coef')
         type = "real"
         bmi_status = BMI_SUCCESS
     case('flow_out', 'hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'seg_lateral_inflow', &
@@ -524,6 +528,12 @@
         bmi_status = BMI_SUCCESS
     case('seginc')
         units = 'Ly'
+        bmi_status = BMI_SUCCESS
+    case('k_coef')
+        units = 'hrs'
+        bmi_status = BMI_SUCCESS
+    case('x_coef')
+        units = 'hrs'
         bmi_status = BMI_SUCCESS
     case default
         units = "-"
@@ -565,6 +575,12 @@
         bmi_status = BMI_SUCCESS
     case('seg_gwflow')
         size = sizeof(this%model%model_simulation%model_streamflow%seg_gwflow)
+        bmi_status = BMI_SUCCESS
+    case('k_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                size = sizeof(model_streamflow%k_coef)
+        end select
         bmi_status = BMI_SUCCESS
     case('seg_sroff')
         size = sizeof(this%model%model_simulation%model_streamflow%seg_sroff)
@@ -1097,6 +1113,18 @@
     case('sroff')
         this%model%model_simulation%runoff%sroff = src
         bmi_status = BMI_SUCCESS
+    case('k_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+        type is(Muskingum)
+            model_streamflow%k_coef = src
+        end select
+        bmi_status = BMI_SUCCESS
+    case('x_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+        type is(Muskingum)
+            model_streamflow%x_coef = src
+        end select
+        bmi_status = BMI_SUCCESS
 
     case default
         bmi_status = BMI_FAILURE
@@ -1120,66 +1148,89 @@
     end function prms_set_double
     !
     ! Set integer values at particular locations.
-    !function prms_set_at_indices_int(this, name, indices, src) &
-    !     result (bmi_status)
-    !  class (bmi_prms_streamflow), intent(inout) :: this
-    !  character (len=*), intent(in) :: name
-    !  integer, intent(in) :: indices(:)
-    !  integer, intent(in) :: src(:)
-    !  integer :: bmi_status
-    !  type (c_ptr) dest
-    !  integer, pointer :: dest_flattened(:)
-    !  integer :: i
-    !
-    !  select case(name)
-    !  case default
-    !     bmi_status = BMI_FAILURE
-    !  end select
-    !end function prms_set_at_indices_int
-    !
-    !! Set real values at particular locations.
-    !function prms_set_at_indices_float(this, name, indices, src) &
-    !     result (bmi_status)
-    !  class (bmi_prms_streamflow), intent(inout) :: this
-    !  character (len=*), intent(in) :: name
-    !  integer, intent(in) :: indices(:)
-    !  real, intent(in) :: src(:)
-    !  integer :: bmi_status
-    !  type (c_ptr) dest
-    !  real, pointer :: dest_flattened(:)
-    !  integer :: i
-    !
-    !  select case(name)
-    !  case("potet")
-    !     dest = c_loc(this%model%model_simulation%potet%potet(1))
-    !     call c_f_pointer(dest, dest_flattened, [this%model%model_simulation%model_basin%nhru])
-    !     do i = 1, size(indices)
-    !        dest_flattened(indices(i)) = src(i)
-    !     end do
-    !     bmi_status = BMI_SUCCESS
-    !  case default
-    !     bmi_status = BMI_FAILURE
-    !  end select
-    !end function prms_set_at_indices_float
-    !
-    !! Set double values at particular locations.
-    !function prms_set_at_indices_double(this, name, indices, src) &
-    !     result (bmi_status)
-    !  class (bmi_prms_streamflow), intent(inout) :: this
-    !  character (len=*), intent(in) :: name
-    !  integer, intent(in) :: indices(:)
-    !  double precision, intent(in) :: src(:)
-    !  integer :: bmi_status
-    !  type (c_ptr) dest
-    !  double precision, pointer :: dest_flattened(:)
-    !  integer :: i
-    !
-    !  select case(name)
-    !  case default
-    !     bmi_status = BMI_FAILURE
-    !  end select
-    !end function prms_set_at_indices_double
+    function prms_set_at_indices_int(this, name, inds, src) &
+        result (bmi_status)
+    class (bmi_prms_streamflow), intent(inout) :: this
+    character (len=*), intent(in) :: name
+    integer, intent(in) :: inds(:)
+    integer, intent(in) :: src(:)
+    integer :: bmi_status
+    type (c_ptr) dest
+    integer, pointer :: dest_flattened(:)
+    integer :: i
+
+    select case(name)
+        case default
+        bmi_status = BMI_FAILURE
+    end select
+    end function prms_set_at_indices_int
+
+    ! Set real values at particular locations.
+    function prms_set_at_indices_float(this, name, inds, src) &
+        result (bmi_status)
+    class (bmi_prms_streamflow), intent(inout) :: this
+    character (len=*), intent(in) :: name
+    integer, intent(in) :: inds(:)
+    real, intent(in) :: src(:)
+    integer :: bmi_status
+    type (c_ptr) dest
+    real, pointer :: dest_flattened(:)
+    integer :: i, n_elements, status, gridid
+
+    status = this%get_var_grid(name, gridid)
+    status = this%get_grid_size(gridid, n_elements)
     
+    select case(name)
+        !case("potet")
+        !   dest = c_loc(this%model%model_simulation%potet%potet(1))
+        !   call c_f_pointer(dest, dest_flattened, [this%model%model_simulation%model_basin%nhru])
+        !   do i = 1, size(indices)
+        !      dest_flattened(indices(i)) = src(i)
+        !   end do
+        !   bmi_status = BMI_SUCCESS
+    case('k_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                dest = c_loc(model_streamflow%k_coef(1))
+                call c_f_pointer(dest, dest_flattened, [n_elements])
+                do i = 1, size(inds)
+                    dest_flattened(inds(i)) = src(i)
+                end do
+        end select
+        bmi_status = BMI_SUCCESS
+    case('x_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                dest = c_loc(model_streamflow%x_coef(1))
+                call c_f_pointer(dest, dest_flattened, [n_elements])
+                do i = 1, size(inds)
+                    dest_flattened(inds(i)) = src(i)
+                end do
+        end select
+        bmi_status = BMI_SUCCESS
+        case default
+        bmi_status = BMI_FAILURE
+    end select
+    end function prms_set_at_indices_float
+
+    ! Set double values at particular locations.
+    function prms_set_at_indices_double(this, name, inds, src) &
+        result (bmi_status)
+    class (bmi_prms_streamflow), intent(inout) :: this
+    character (len=*), intent(in) :: name
+    integer, intent(in) :: inds(:)
+    double precision, intent(in) :: src(:)
+    integer :: bmi_status
+    type (c_ptr) dest
+    double precision, pointer :: dest_flattened(:)
+    integer :: i
+
+    select case(name)
+        case default
+        bmi_status = BMI_FAILURE
+    end select
+    end function prms_set_at_indices_double
+
     ! A non-BMI procedure for model introspection.
     !subroutine print_model_info(this)
     !  class (bmi_prms_streamflow), intent(in) :: this
