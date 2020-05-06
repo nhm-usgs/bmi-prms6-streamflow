@@ -80,7 +80,7 @@
     public :: bmi_prms_streamflow
 
     character (len=BMI_MAX_COMPONENT_NAME), target :: &
-        component_name = "prms6-BMI"
+        component_name = "prms6-streamflow-BMI"
 
     ! Exchange items
     integer, parameter :: input_item_count = 8
@@ -91,42 +91,42 @@
     ! input vars from surface soil and groundwater required to run
     ! stream flow
     ! from potet
-    'potet', &
+    'potet              ', &
     ! from solrad
-    'swrad', &
+    'swrad              ', &
     ! from groundwater
-    'gwres_flow', &
+    'gwres_flow         ', &
     ! from soil
-    'ssres_flow', &
+    'ssres_flow         ', &
     ! from runoff
-    'sroff', &
-    'strm_seg_in', &
+    'sroff              ', &
+    'strm_seg_in        ', &
         
     ! for calibration
-    'k_coef', & !r32 by nsegment
-    'x_coef' & ! r32 by nhru
+    'k_coef             ', & !r32 by nsegment
+    'x_coef             ' & ! r32 by nhru
     /)
 
     character (len=BMI_MAX_VAR_NAME), target, &
         dimension(output_item_count) :: output_items  = (/ &
         ! A list of potential ouputs needs more work once other streamflow 
         ! modules are added to prms6
-    'flow_out', & !r64 by nhru
-    'hru_outflow', & !r64 by nhru
-    'seg_gwflow', & !r64 by nsegment
-    'seg_sroff', & !r64 by nsegment
-    'seg_ssflow', & !r64 by nsegment
-    'seg_lateral_inflow', &  !r64 by nsegment
-    'segment_order', & ! i32 by nsegment
-    'segment_up', & !i32 by nsegment
-    'seg_inflow', & !r64 by nsegment
-    'seg_outflow', & !r64 by nsegment
+    'flow_out           ', & !r64 by nhru
+    'hru_outflow        ', & !r64 by nhru
+    'seg_gwflow         ', & !r64 by nsegment
+    'seg_sroff          ', & !r64 by nsegment
+    'seg_ssflow         ', & !r64 by nsegment
+    'seg_lateral_inflow ', &  !r64 by nsegment
+    'segment_order      ', & ! i32 by nsegment
+    'segment_up         ', & !i32 by nsegment
+    'seg_inflow         ', & !r64 by nsegment
+    'seg_outflow        ', & !r64 by nsegment
     'seg_upstream_inflow', & !r64 by nsegment
-    'seginc_gwflow', &  !r64 by nsegment
-    'seginc_sroff', & !r64 by nsegment
-    'seginc_ssflow', & !r64 by nsegment
-    'seginc_swrad', & !r64 by nsegment
-    'segment_delta_flow' & !r64 by nsegment
+    'seginc_gwflow      ', &  !r64 by nsegment
+    'seginc_sroff       ', & !r64 by nsegment
+    'seginc_ssflow      ', & !r64 by nsegment
+    'seginc_swrad       ', & !r64 by nsegment
+    'segment_delta_flow ' & !r64 by nsegment
     /)
     
 
@@ -296,13 +296,13 @@
 
     select case(name)
     case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff', &
-        'hru_outflow', 'x_coef')
+        'hru_outflow')
         grid = 0
         bmi_status = BMI_SUCCESS
     case('strm_seg_in', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', &
         'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', &
         'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', &
-        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow', 'k_coef')
+        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow', 'k_coef', 'x_coef')
         grid = 1
         bmi_status = BMI_SUCCESS
     case('flow_out')
@@ -533,7 +533,7 @@
         units = 'hrs'
         bmi_status = BMI_SUCCESS
     case('x_coef')
-        units = 'hrs'
+        units = 'decimal fraction'
         bmi_status = BMI_SUCCESS
     case default
         units = "-"
@@ -1179,36 +1179,58 @@
 
     status = this%get_var_grid(name, gridid)
     status = this%get_grid_size(gridid, n_elements)
-    
+    bmi_status = BMI_SUCCESS
+
     select case(name)
-        !case("potet")
-        !   dest = c_loc(this%model%model_simulation%potet%potet(1))
-        !   call c_f_pointer(dest, dest_flattened, [this%model%model_simulation%model_basin%nhru])
-        !   do i = 1, size(indices)
-        !      dest_flattened(indices(i)) = src(i)
-        !   end do
-        !   bmi_status = BMI_SUCCESS
+    case("potet")
+        dest = c_loc(this%model%model_simulation%potet%potet(1))
+        call c_f_pointer(dest, dest_flattened, [n_elements])
+        do i = 1, size(inds)
+            dest_flattened(inds(i)) = src(i)
+        end do
+    case('swrad')
+        dest = c_loc(this%model%model_simulation%solrad%swrad(1))
+        call c_f_pointer(dest, dest_flattened, [n_elements])
+        do i = 1, size(inds)
+            dest_flattened(inds(i)) = src(i)
+        end do
+    case('gwres_flow')
+        dest = c_loc(this%model%model_simulation%groundwater%gwres_flow(1))
+        call c_f_pointer(dest, dest_flattened, [n_elements])
+        do i = 1, size(inds)
+            dest_flattened(inds(i)) = src(i)
+        end do
+    case('ssres_flow')
+        dest = c_loc(this%model%model_simulation%soil%ssres_flow(1))
+        call c_f_pointer(dest, dest_flattened, [n_elements])
+        do i = 1, size(inds)
+            dest_flattened(inds(i)) = src(i)
+        end do
+    case('sroff')
+        dest = c_loc(this%model%model_simulation%runoff%sroff(1))
+        call c_f_pointer(dest, dest_flattened, [n_elements])
+        do i = 1, size(inds)
+            dest_flattened(inds(i)) = src(i)
+        end do
     case('k_coef')
         select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                dest = c_loc(model_streamflow%k_coef(1))
-                call c_f_pointer(dest, dest_flattened, [n_elements])
-                do i = 1, size(inds)
-                    dest_flattened(inds(i)) = src(i)
-                end do
+        type is(Muskingum)
+            dest = c_loc(model_streamflow%k_coef(1))
+            call c_f_pointer(dest, dest_flattened, [n_elements])
+            do i = 1, size(inds)
+                dest_flattened(inds(i)) = src(i)
+            end do
         end select
-        bmi_status = BMI_SUCCESS
     case('x_coef')
         select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                dest = c_loc(model_streamflow%x_coef(1))
-                call c_f_pointer(dest, dest_flattened, [n_elements])
-                do i = 1, size(inds)
-                    dest_flattened(inds(i)) = src(i)
-                end do
+        type is(Muskingum)
+            dest = c_loc(model_streamflow%x_coef(1))
+            call c_f_pointer(dest, dest_flattened, [n_elements])
+            do i = 1, size(inds)
+                dest_flattened(inds(i)) = src(i)
+            end do
         end select
-        bmi_status = BMI_SUCCESS
-        case default
+    case default
         bmi_status = BMI_FAILURE
     end select
     end function prms_set_at_indices_float
@@ -1223,9 +1245,21 @@
     integer :: bmi_status
     type (c_ptr) dest
     double precision, pointer :: dest_flattened(:)
-    integer :: i
+    integer :: i, n_elements, status, gridid
+    
+    status = this%get_var_grid(name, gridid)
+    status = this%get_grid_size(gridid, n_elements)
+    bmi_status = BMI_SUCCESS
 
     select case(name)
+    case('strm_seg_in')
+        this%model%model_simulation%runoff%strm_seg_in = src
+        dest = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+        call c_f_pointer(dest, dest_flattened, [n_elements])
+        do i = 1, size(inds)
+            dest_flattened(inds(i)) = src(i)
+        end do
+
         case default
         bmi_status = BMI_FAILURE
     end select
