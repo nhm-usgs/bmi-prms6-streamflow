@@ -111,7 +111,7 @@
         dimension(output_item_count) :: output_items  = (/ &
         ! A list of potential ouputs needs more work once other streamflow 
         ! modules are added to prms6
-    'flow_out           ', & !r64 by nhru
+    'flow_out           ', & !r64 by 1
     'hru_outflow        ', & !r64 by nhru
     'seg_gwflow         ', & !r64 by nsegment
     'seg_sroff          ', & !r64 by nsegment
@@ -300,8 +300,8 @@
         grid = 0
         bmi_status = BMI_SUCCESS
     case('strm_seg_in', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', &
-        'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', &
-        'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', &
+        'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', 'segment_up', &
+        'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', 'segment_order', &
         'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow', 'k_coef', 'x_coef')
         grid = 1
         bmi_status = BMI_SUCCESS
@@ -497,7 +497,7 @@
         bmi_status = BMI_SUCCESS
     case('flow_out', 'hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'seg_lateral_inflow', &
             'seg_inflow','seg_outflow', 'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', &
-            'seginc_ssflow', 'seginc_swrad', 'sement_delta_flow')
+            'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow')
         type = "double"
         bmi_status = BMI_SUCCESS
     case('segment_order', 'segment_up')
@@ -518,7 +518,7 @@
 
     select case(name)
     case('potet', 'swrad', 'gwres_flow', 'ssres_flow', 'sroff', &
-        'seg_gwflow', 'seg_sroff', 'seg_ssflow')
+        'seg_gwflow', 'seg_ssflow', 'seg_sroff')
         units = "in"
         bmi_status = BMI_SUCCESS
     case('strm_seg_in', 'flow_out', &
@@ -526,7 +526,7 @@
         'seginc_gwflow', 'seginc_sroff', 'seginc_ssflow', 'segment_delta_flow')
         units = "ft3 s-1"
         bmi_status = BMI_SUCCESS
-    case('seginc')
+    case('seginc_swrad')
         units = 'Ly'
         bmi_status = BMI_SUCCESS
     case('k_coef')
@@ -537,7 +537,7 @@
         bmi_status = BMI_SUCCESS
     case default
         units = "-"
-        bmi_status = BMI_FAILURE
+        bmi_status = BMI_SUCCESS
     end select
     end function prms_var_units
 
@@ -553,76 +553,76 @@
     !    size = sizeof(this%model%model_simulation%model_basin%nlake)
     !    bmi_status = BMI_SUCCESS
     case('potet')
-        size = sizeof(this%model%model_simulation%potet%potet)
+        size = sizeof(this%model%model_simulation%potet%potet(1))
         bmi_status = BMI_SUCCESS
     case('swrad')
-        size = sizeof(this%model%model_simulation%solrad%swrad)
+        size = sizeof(this%model%model_simulation%solrad%swrad(1))
         bmi_status = BMI_SUCCESS
     case('gwres_flow')
-        size = sizeof(this%model%model_simulation%groundwater%gwres_flow)
+        size = sizeof(this%model%model_simulation%groundwater%gwres_flow(1))
         bmi_status = BMI_SUCCESS
     case('ssres_flow')
-        size = sizeof(this%model%model_simulation%soil%ssres_flow)
+        size = sizeof(this%model%model_simulation%soil%ssres_flow(1))
         bmi_status = BMI_SUCCESS
     case('sroff')
-        size = sizeof(this%model%model_simulation%runoff%sroff)
+        size = sizeof(this%model%model_simulation%runoff%sroff(1))
         bmi_status = BMI_SUCCESS
     case('strm_seg_in')
-        size = sizeof(this%model%model_simulation%runoff%strm_seg_in)
+        size = sizeof(this%model%model_simulation%runoff%strm_seg_in(1))
         bmi_status = BMI_SUCCESS
     case('hru_outflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%hru_outflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%hru_outflow(1))
         bmi_status = BMI_SUCCESS
     case('seg_gwflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%seg_gwflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_gwflow(1))
         bmi_status = BMI_SUCCESS
     case('k_coef')
         select type(model_streamflow => this%model%model_simulation%model_streamflow)
             type is(Muskingum)
-                size = sizeof(model_streamflow%k_coef)
+                size = sizeof(model_streamflow%k_coef(1))
         end select
         bmi_status = BMI_SUCCESS
     case('seg_sroff')
-        size = sizeof(this%model%model_simulation%model_streamflow%seg_sroff)
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_sroff(1))
         bmi_status = BMI_SUCCESS
     case('seg_ssflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%seg_ssflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_ssflow(1))
         bmi_status = BMI_SUCCESS
     case('seg_lateral_inflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%seg_lateral_inflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_lateral_inflow(1))
         bmi_status = BMI_SUCCESS
     case('flow_out')
         size = sizeof(this%model%model_simulation%model_streamflow%flow_out)
         bmi_status = BMI_SUCCESS
     case('segment_order')
-        size = sizeof(this%model%model_simulation%model_streamflow%segment_order)
+        size = sizeof(this%model%model_simulation%model_streamflow%segment_order(1))
         bmi_status = BMI_SUCCESS
     case('segment_up')
-        size = sizeof(this%model%model_simulation%model_streamflow%segment_up)
+        size = sizeof(this%model%model_simulation%model_streamflow%segment_up(1))
         bmi_status = BMI_SUCCESS
     case('seg_inflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%seg_inflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_inflow(1))
         bmi_status = BMI_SUCCESS
     case('seg_outflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%seg_outflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_outflow(1))
         bmi_status = BMI_SUCCESS
     case('seg_upstream_inflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%seg_upstream_inflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%seg_upstream_inflow(1))
         bmi_status = BMI_SUCCESS
     case('seginc_gwflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%seginc_gwflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%seginc_gwflow(1))
         bmi_status = BMI_SUCCESS
     case('seginc_sroff')
-        size = sizeof(this%model%model_simulation%model_streamflow%seginc_sroff)
+        size = sizeof(this%model%model_simulation%model_streamflow%seginc_sroff(1))
         bmi_status = BMI_SUCCESS
     case('seginc_ssflow')
-        size = sizeof(this%model%model_simulation%model_streamflow%seginc_ssflow)
+        size = sizeof(this%model%model_simulation%model_streamflow%seginc_ssflow(1))
         bmi_status = BMI_SUCCESS
     case('seginc_swrad')
-        size = sizeof(this%model%model_simulation%model_streamflow%seginc_swrad)
+        size = sizeof(this%model%model_simulation%model_streamflow%seginc_swrad(1))
         bmi_status = BMI_SUCCESS
     case('segment_delta_flow' )
-        size = sizeof(this%model%model_simulation%model_streamflow%segment_delta_flow)
+        size = sizeof(this%model%model_simulation%model_streamflow%segment_delta_flow(1))
         bmi_status = BMI_SUCCESS
 
     case default
@@ -808,19 +808,14 @@
     integer :: bmi_status
     type (c_ptr) :: src
     integer :: n_elements, gridid, status
+    
+    status = this%get_var_grid(name,gridid)
+    status = this%get_grid_size(gridid, n_elements)
+
+    bmi_status = BMI_SUCCESS
 
     select case(name)
-        !case("plate_surface__temperature")
-        !   src = c_loc(this%model%temperature(1,1))
-        !   n_elements = this%model%n_y * this%model%n_x
-        !   call c_f_pointer(src, dest, [n_elements])
-        !   bmi_status = BMI_SUCCESS
-    !case('hru_ppt')
-    !    src = c_loc(this%model%model_simulation%model_precip%hru_ppt(1))
-    !    status = this%get_var_grid(name,gridid)
-    !    status = this%get_grid_size(gridid, n_elements)
-    !    call c_f_pointer(src, dest_ptr, [n_elements])
-    !    bmi_status = BMI_SUCCESS
+
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -835,8 +830,7 @@
     type (c_ptr) :: src
     integer :: n_elements, status, gridid
         
-    status = this%get_var_grid(name,gridid)
-        
+    status = this%get_var_grid(name, gridid)
     status = this%get_grid_size(gridid, n_elements)
 
     select case(name)
