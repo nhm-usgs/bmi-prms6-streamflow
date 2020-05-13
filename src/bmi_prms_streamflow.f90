@@ -91,7 +91,7 @@
 
     ! Exchange items
     integer, parameter :: input_item_count = 8
-    integer, parameter :: output_item_count = 16
+    integer, parameter :: output_item_count = 24
     character (len=BMI_MAX_VAR_NAME), target, &
         dimension(input_item_count) :: input_items = (/ &
             
@@ -133,7 +133,23 @@
     'seginc_sroff       ', & !r64 by nsegment
     'seginc_ssflow      ', & !r64 by nsegment
     'seginc_swrad       ', & !r64 by nsegment
-    'segment_delta_flow ' & !r64 by nsegment
+    'segment_delta_flow ', & !r64 by nsegment
+    !input vars to also get out
+        ! from potet
+    'potet              ', &
+    ! from solrad
+    'swrad              ', &
+    ! from groundwater
+    'gwres_flow         ', &
+    ! from soil
+    'ssres_flow         ', &
+    ! from runoff
+    'sroff              ', &
+    'strm_seg_in        ', &
+        
+    ! for calibration
+    'k_coef             ', & !r32 by nsegment
+    'x_coef             ' & ! r32 by nhru
     /)
     
 
@@ -687,8 +703,13 @@
         size = sizeof(this%model%model_simulation%runoff%sroff(1))
         bmi_status = BMI_SUCCESS
     case('strm_seg_in')
-        size = sizeof(this%model%model_simulation%runoff%strm_seg_in(1))
-        bmi_status = BMI_SUCCESS
+        if(this%model%control_data%cascade_flag%value == 1) then
+            size = sizeof(this%model%model_simulation%runoff%strm_seg_in(1))
+            bmi_status = BMI_SUCCESS
+        else
+            size = -1
+            bmi_status = BMI_FAILURE
+        endif
     case('hru_outflow')
         size = sizeof(this%model%model_simulation%model_streamflow%hru_outflow(1))
         bmi_status = BMI_SUCCESS
@@ -699,6 +720,12 @@
         select type(model_streamflow => this%model%model_simulation%model_streamflow)
             type is(Muskingum)
                 size = sizeof(model_streamflow%k_coef(1))
+        end select
+        bmi_status = BMI_SUCCESS
+    case('x_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                size = sizeof(model_streamflow%x_coef(1))
         end select
         bmi_status = BMI_SUCCESS
     case('seg_sroff')
@@ -811,28 +838,32 @@
     character (len=*), intent(in) :: name
     real, intent(inout) :: dest(:)
     integer :: bmi_status
-
+        
+    bmi_status = BMI_SUCCESS
+    
     select case(name)
-        !case("plate_surface__temperature")
-        !   ! This would be safe, but subject to indexing errors.
-        !   ! do j = 1, this%model%n_y
-        !   !    do i = 1, this%model%n_x
-        !   !       k = j + this%model%n_y*(i-1)
-        !   !       dest(k) = this%model%temperature(j,i)
-        !   !    end do
-        !   ! end do
-        !
-        !   ! This is an equivalent, elementwise copy into `dest`.
-        !   ! See https://stackoverflow.com/a/11800068/1563298
-        !   dest = reshape(this%model%temperature, [this%model%n_x*this%model%n_y])
-        !   bmi_status = BMI_SUCCESS
-        !case("plate_surface__thermal_diffusivity")
-        !   dest = [this%model%alpha]
-        !   bmi_status = BMI_SUCCESS
-    !case('hru_ppt')
-    !    dest = [this%model%model_simulation%model_precip%hru_ppt]
-    !    bmi_status = BMI_SUCCESS
-
+        !potet
+    case('potet')
+        dest = [this%model%model_simulation%potet%potet]
+        !solrad
+    case('swrad')
+        dest = [this%model%model_simulation%solrad%swrad]
+    case('gwres_flow')
+        dest = [this%model%model_simulation%groundwater%gwres_flow]
+    case('ssres_flow')
+        dest = [this%model%model_simulation%soil%ssres_flow]
+    case('sroff')
+        dest = [this%model%model_simulation%runoff%sroff]
+    case('k_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                dest = [model_streamflow%k_coef(1)]
+            end select
+    case('x_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                dest = [model_streamflow%x_coef(1)]
+        end select
     case default
         dest = [-1.0]
         bmi_status = BMI_FAILURE
@@ -890,7 +921,14 @@
     case('segment_delta_flow') 
         dest = [this%model%model_simulation%model_streamflow%segment_delta_flow]
         bmi_status = BMI_SUCCESS
-
+   case('strm_seg_in')
+        if(this%model%control_data%cascade_flag%value == 1) then
+            dest = [this%model%model_simulation%runoff%strm_seg_in]
+            bmi_status = BMI_SUCCESS
+        else
+            dest = [-1.d0]
+            bmi_status = BMI_FAILURE
+        endif
     case default
         dest = [-1.d0]
         bmi_status = BMI_FAILURE
@@ -934,7 +972,33 @@
     bmi_status = BMI_SUCCESS
 
     select case(name)
-
+    case('potet')
+        src = c_loc(this%model%model_simulation%potet%potet(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+    case('swrad')
+        src = c_loc(this%model%model_simulation%solrad%swrad(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+    case('gwres_flow')
+        src = c_loc(this%model%model_simulation%groundwater%gwres_flow(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+    case('ssres_flow')
+        src = c_loc(this%model%model_simulation%soil%ssres_flow(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+    case('sroff')
+        src = c_loc(this%model%model_simulation%runoff%sroff(1))
+        call c_f_pointer(src, dest_ptr, [n_elements])
+    case('k_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                src = c_loc(model_streamflow%k_coef(1))
+                call c_f_pointer(src, dest_ptr, [n_elements])
+        end select
+    case('x_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                src = c_loc(model_streamflow%x_coef(1))
+                call c_f_pointer(src, dest_ptr, [n_elements])
+        end select
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1005,6 +1069,14 @@
         src = c_loc(this%model%model_simulation%model_streamflow%segment_delta_flow(1))
         call c_f_pointer(src, dest_ptr, [n_elements])
         bmi_status = BMI_SUCCESS
+   case('strm_seg_in')
+        if(this%model%control_data%cascade_flag%value == 1) then
+            src = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+            call c_f_pointer(src, dest_ptr, [n_elements])
+            bmi_status = BMI_SUCCESS
+        else
+            bmi_status = BMI_FAILURE
+        endif
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1048,25 +1120,62 @@
     type (c_ptr) src
     real, pointer :: src_flattened(:)
     integer :: i, n_elements, status, gridid
+        
+    status = this%get_var_grid(name,gridid)
+    status = this%get_grid_size(gridid, n_elements)
+        
+    bmi_status = BMI_SUCCESS
 
     select case(name)
-        !case("plate_surface__temperature")
-        !   src = c_loc(this%model%temperature(1,1))
-        !   call c_f_pointer(src, src_flattened, [this%model%n_y * this%model%n_x])
-        !   n_elements = size(indices)
-        !   do i = 1, n_elements
-        !      dest(i) = src_flattened(indices(i))
-        !   end do
-        !   bmi_status = BMI_SUCCESS
-    !case('hru_ppt')
-    !    src = c_loc(this%model%model_simulation%model_precip%hru_ppt(1))
-    !    status = this%get_var_grid(name,gridid)
-    !    status = this%get_grid_size(gridid, n_elements)
-    !    call c_f_pointer(src, src_flattened, [n_elements])
-    !    do i = 1,  size(inds)
-    !        dest(i) = src_flattened(inds(i))
-    !    end do
-    !    bmi_status = BMI_SUCCESS
+        !potet
+    case('potet')
+        src = c_loc(this%model%model_simulation%potet%potet(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+    case('swrad')
+        src = c_loc(this%model%model_simulation%solrad%swrad(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+    case('gwres_flow')
+        src = c_loc(this%model%model_simulation%groundwater%gwres_flow(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+    case('ssres_flow')
+        src = c_loc(this%model%model_simulation%soil%ssres_flow(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+    case('sroff')
+        src = c_loc(this%model%model_simulation%runoff%sroff(1))
+        call c_f_pointer(src, src_flattened, [n_elements])
+        do i = 1,  size(inds)
+            dest(i) = src_flattened(inds(i))
+        end do
+    case('k_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                src = c_loc(model_streamflow%k_coef(1))
+                call c_f_pointer(src, src_flattened, [n_elements])
+                do i = 1,  size(inds)
+                    dest(i) = src_flattened(inds(i))
+                end do
+        end select
+    case('x_coef')
+        select type(model_streamflow => this%model%model_simulation%model_streamflow)
+            type is(Muskingum)
+                src = c_loc(model_streamflow%x_coef(1))
+                call c_f_pointer(src, src_flattened, [n_elements])
+                do i = 1,  size(inds)
+                    dest(i) = src_flattened(inds(i))
+                end do
+        end select
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1179,6 +1288,17 @@
             dest(i) = src_flattened(inds(i))
         end do
         bmi_status = BMI_SUCCESS
+   case('strm_seg_in')
+        if(this%model%control_data%cascade_flag%value == 1) then
+            src = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+            call c_f_pointer(src, src_flattened, [n_elements])
+            do i = 1,  size(inds)
+                dest(i) = src_flattened(inds(i))
+            end do
+            bmi_status = BMI_SUCCESS
+        else
+            bmi_status = BMI_FAILURE
+        endif
     case default
         bmi_status = BMI_FAILURE
     end select
