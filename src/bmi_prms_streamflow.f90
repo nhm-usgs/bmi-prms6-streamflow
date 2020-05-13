@@ -91,7 +91,7 @@
 
     ! Exchange items
     integer, parameter :: input_item_count = 8
-    integer, parameter :: output_item_count = 24
+    integer, parameter :: output_item_count = 25
     character (len=BMI_MAX_VAR_NAME), target, &
         dimension(input_item_count) :: input_items = (/ &
             
@@ -149,7 +149,9 @@
         
     ! for calibration
     'k_coef             ', & !r32 by nsegment
-    'x_coef             ' & ! r32 by nhru
+    'x_coef             ', & ! r32 by nhru
+    
+    'nowtime' &
     /)
     
 
@@ -330,6 +332,10 @@
         bmi_status = BMI_SUCCESS
     case('flow_out')
         grid = 2
+    case('nowtime')
+        grid = 3
+        bmi_status = BMI_SUCCESS
+
     case default
         grid = -1
         bmi_status = BMI_FAILURE
@@ -635,7 +641,7 @@
             'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow')
         type = "double"
         bmi_status = BMI_SUCCESS
-    case('segment_order', 'segment_up')
+    case('segment_order', 'segment_up', 'nowtime')
         type='integer'
         bmi_status = BMI_SUCCESS
     case default
@@ -669,6 +675,9 @@
         bmi_status = BMI_SUCCESS
     case('x_coef')
         units = 'decimal fraction'
+        bmi_status = BMI_SUCCESS
+    case('nowtime')
+        units = '-'
         bmi_status = BMI_SUCCESS
     case default
         units = "-"
@@ -770,7 +779,9 @@
     case('segment_delta_flow' )
         size = sizeof(this%model%model_simulation%model_streamflow%segment_delta_flow(1))
         bmi_status = BMI_SUCCESS
-
+    case('nowtime')
+        size = sizeof(this%model%model_simulation%model_time%nowtime(1))
+        bmi_status = BMI_SUCCESS
     case default
         size = -1
         bmi_status = BMI_FAILURE
@@ -826,6 +837,11 @@
     case('segment_up')
         dest = [this%model%model_simulation%model_streamflow%segment_up]
         bmi_status = BMI_SUCCESS
+        !prms_time
+    case('nowtime')
+        dest = [this%model%model_simulation%model_time%nowtime]
+        bmi_status = BMI_SUCCESS
+
     case default
         dest = [-1]
         bmi_status = BMI_FAILURE
