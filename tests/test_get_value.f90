@@ -10,13 +10,13 @@
   type (bmi_prms_streamflow) :: m
   integer :: retcode
 
-  !test r32 gwres_flow
+  !Test getting r64 by 1 flow_out.
   retcode = test1()
   if (retcode.ne.BMI_SUCCESS) then
     stop BMI_FAILURE
   end if
 
-  !r64 by nhru gwres_stor_ante.
+  !Test r64 by nhru hru_outflow.
   retcode = test2()
   if (retcode.ne.BMI_SUCCESS) then
      stop BMI_FAILURE
@@ -37,7 +37,7 @@
 contains
 
 
-  ! Test getting r32 gwres_flow.
+  ! Test getting r64 by 1 flow_out.
   function test1() result(status)
     character (len=*), parameter :: &
          var_name = "flow_out"
@@ -77,7 +77,7 @@ contains
     end do
   end function test1
 
-  ! Test r64 by nhru.
+  ! Test r64 by nhru hru_outflow.
   function test2() result(status)
     character (len=*), parameter :: &
          var_name = "hru_outflow"
