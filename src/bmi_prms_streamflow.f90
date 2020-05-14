@@ -340,17 +340,18 @@
     integer, intent(in) :: grid
     character (len=*), intent(out) :: type
     integer :: bmi_status
-
+        
+    bmi_status = BMI_SUCCESS
+    
     select case(grid)
     case(0)
         type = "vector"
-        bmi_status = BMI_SUCCESS
     case(1)
         type = "vector"
-        bmi_status = BMI_SUCCESS
     case(2)
         type = 'scalar'
-        bmi_status = BMI_SUCCESS
+    case(3)
+        type = 'vector'
     case default
         type = "-"
         bmi_status = BMI_FAILURE
@@ -364,16 +365,17 @@
     integer, intent(out) :: rank
     integer :: bmi_status
 
+    bmi_status = BMI_SUCCESS
+
     select case(grid)
     case(0)
         rank = 1
-        bmi_status = BMI_SUCCESS
     case(1)
         rank = 1
-        bmi_status = BMI_SUCCESS
     case(2)
         rank = 1
-        bmi_status = BMI_SUCCESS
+    case(3)
+        rank = 1
     case default
         rank = -1
         bmi_status = BMI_FAILURE
@@ -410,17 +412,19 @@
     integer, intent(in) :: grid
     integer, intent(out) :: size
     integer :: bmi_status
+        
+    bmi_status = BMI_SUCCESS
 
     select case(grid)
     case(0)
         size = this%model%model_simulation%model_basin%nhru
-        bmi_status = BMI_SUCCESS
     case(1)
         size = this%model%model_simulation%model_basin%nsegment
-        bmi_status = BMI_SUCCESS
     case(2)
         size = 1
-        bmi_status = BMI_SUCCESS
+    case(3)
+        size = 6
+
     case default
         size = -1
         bmi_status = BMI_FAILURE
@@ -466,8 +470,14 @@
     case(0)
         x = this%model%model_simulation%model_basin%hru_x
         bmi_status = BMI_SUCCESS
-    case default
-        x = [-1.0]
+    case(1)
+        bmi_status = this%get_value('nhm_seg', x)
+    case(2)
+        x = -1.d0
+    case(3)
+        x = dble([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+case default
+        x(:) = -1.d0
         bmi_status = BMI_FAILURE
     end select
     end function prms_grid_x
@@ -483,8 +493,11 @@
     case(0)
         y = this%model%model_simulation%model_basin%hru_y
         bmi_status = BMI_SUCCESS
+    case(1:3) 
+        y(:) = -1.d0
+        bmi_status = BMI_SUCCESS
     case default
-        y = [-1.0]
+        y(:) = -1.d0
         bmi_status = BMI_FAILURE
     end select
     end function prms_grid_y
@@ -500,8 +513,10 @@
     case(0)
         z = this%model%model_simulation%model_basin%hru_elev
         bmi_status = BMI_SUCCESS
-    case default
-        z = [-1.0]
+    case(1:3) 
+        z(:) = -1.d0
+        bmi_status = BMI_SUCCESS    case default
+        z(:) = -1.d0
         bmi_status = BMI_FAILURE
     end select
     end function prms_grid_z
@@ -679,9 +694,6 @@
     integer :: bmi_status
 
     select case(name)
-    !case("nlake")
-    !    size = sizeof(this%model%model_simulation%model_basin%nlake)
-    !    bmi_status = BMI_SUCCESS
     case('potet')
         size = sizeof(this%model%model_simulation%potet%potet(1))
         bmi_status = BMI_SUCCESS
@@ -792,7 +804,7 @@
 
         select case(name)
         case default
-           location = "face"
+           location = "node"
            bmi_status = BMI_SUCCESS
         end select
     end function prms_var_location
@@ -925,12 +937,6 @@
     integer :: n_elements, gridid
 
     select case(name)
-    !case("nlake")
-    !    src = c_loc(this%model%model_simulation%model_basin%nlake)
-    !    status = this%get_var_grid(name,gridid)
-    !    status = this%get_grid_size(gridid, n_elements)
-    !    call c_f_pointer(src, dest_ptr, [n_elements])
-    !    bmi_status = BMI_SUCCESS
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1063,15 +1069,6 @@
     integer :: i, n_elements, status, gridid
 
     select case(name)
-    !case('cov_type')
-    !    src = c_loc(this%model%model_simulation%model_basin%cov_type(1))
-    !    status = this%get_var_grid(name,gridid)
-    !    status = this%get_grid_size(gridid, n_elements)
-    !    call c_f_pointer(src, src_flattened, [n_elements])
-    !    do i = 1,  size(inds)
-    !        dest(i) = src_flattened(inds(i))
-    !    end do
-    !    bmi_status = BMI_SUCCESS
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1275,9 +1272,6 @@
     integer :: bmi_status
 
     select case(name)
-    !case('dprst_evap_hru')
-    !    this%model%model_simulation%runoff%dprst_evap_hru = src
-    !    bmi_status = BMI_SUCCESS
     case('potet')
         this%model%model_simulation%potet%potet = src
         bmi_status = BMI_SUCCESS
