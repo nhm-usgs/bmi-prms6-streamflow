@@ -90,8 +90,8 @@
         component_name = "prms6-streamflow-BMI"
 
     ! Exchange items
-    integer, parameter :: input_item_count = 8
-    integer, parameter :: output_item_count = 25
+    integer, parameter :: input_item_count = 6
+    integer, parameter :: output_item_count = 23
     character (len=BMI_MAX_VAR_NAME), target, &
         dimension(input_item_count) :: input_items = (/ &
             
@@ -107,11 +107,7 @@
     'ssres_flow         ', &
     ! from runoff
     'sroff              ', &
-    'strm_seg_in        ', &
-        
-    ! for calibration
-    'k_coef             ', & !r32 by nsegment
-    'x_coef             ' & ! r32 by nhru
+    'strm_seg_in        ' &
     /)
 
     character (len=BMI_MAX_VAR_NAME), target, &
@@ -146,11 +142,7 @@
     ! from runoff
     'sroff              ', &
     'strm_seg_in        ', &
-        
-    ! for calibration
-    'k_coef             ', & !r32 by nsegment
-    'x_coef             ', & ! r32 by nhru
-    
+            
     'nowtime' &
     /)
     
@@ -327,7 +319,7 @@
     case('strm_seg_in', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', &
         'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', 'segment_up', &
         'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', 'segment_order', &
-        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow', 'k_coef', 'x_coef')
+        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow')
         grid = 1
         bmi_status = BMI_SUCCESS
     case('flow_out')
@@ -633,7 +625,7 @@
     integer :: bmi_status
 
     select case(name)
-    case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff', 'k_coef', 'x_coef')
+    case('potet','swrad', 'gwres_flow', 'ssres_flow', 'sroff')
         type = "real"
         bmi_status = BMI_SUCCESS
     case('flow_out', 'hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'seg_lateral_inflow', &
@@ -669,12 +661,6 @@
         bmi_status = BMI_SUCCESS
     case('seginc_swrad')
         units = 'Ly'
-        bmi_status = BMI_SUCCESS
-    case('k_coef')
-        units = 'hrs'
-        bmi_status = BMI_SUCCESS
-    case('x_coef')
-        units = 'decimal fraction'
         bmi_status = BMI_SUCCESS
     case('nowtime')
         units = '-'
@@ -724,18 +710,6 @@
         bmi_status = BMI_SUCCESS
     case('seg_gwflow')
         size = sizeof(this%model%model_simulation%model_streamflow%seg_gwflow(1))
-        bmi_status = BMI_SUCCESS
-    case('k_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                size = sizeof(model_streamflow%k_coef(1))
-        end select
-        bmi_status = BMI_SUCCESS
-    case('x_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                size = sizeof(model_streamflow%x_coef(1))
-        end select
         bmi_status = BMI_SUCCESS
     case('seg_sroff')
         size = sizeof(this%model%model_simulation%model_streamflow%seg_sroff(1))
@@ -870,16 +844,6 @@
         dest = [this%model%model_simulation%soil%ssres_flow]
     case('sroff')
         dest = [this%model%model_simulation%runoff%sroff]
-    case('k_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                dest = [model_streamflow%k_coef(1)]
-            end select
-    case('x_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                dest = [model_streamflow%x_coef(1)]
-        end select
     case default
         dest = [-1.0]
         bmi_status = BMI_FAILURE
@@ -1003,18 +967,6 @@
     case('sroff')
         src = c_loc(this%model%model_simulation%runoff%sroff(1))
         call c_f_pointer(src, dest_ptr, [n_elements])
-    case('k_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                src = c_loc(model_streamflow%k_coef(1))
-                call c_f_pointer(src, dest_ptr, [n_elements])
-        end select
-    case('x_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                src = c_loc(model_streamflow%x_coef(1))
-                call c_f_pointer(src, dest_ptr, [n_elements])
-        end select
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1174,24 +1126,6 @@
         do i = 1,  size(inds)
             dest(i) = src_flattened(inds(i))
         end do
-    case('k_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                src = c_loc(model_streamflow%k_coef(1))
-                call c_f_pointer(src, src_flattened, [n_elements])
-                do i = 1,  size(inds)
-                    dest(i) = src_flattened(inds(i))
-                end do
-        end select
-    case('x_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-            type is(Muskingum)
-                src = c_loc(model_streamflow%x_coef(1))
-                call c_f_pointer(src, src_flattened, [n_elements])
-                do i = 1,  size(inds)
-                    dest(i) = src_flattened(inds(i))
-                end do
-        end select
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1458,24 +1392,6 @@
         do i = 1, size(inds)
             dest_flattened(inds(i)) = src(i)
         end do
-    case('k_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-        type is(Muskingum)
-            dest = c_loc(model_streamflow%k_coef(1))
-            call c_f_pointer(dest, dest_flattened, [n_elements])
-            do i = 1, size(inds)
-                dest_flattened(inds(i)) = src(i)
-            end do
-        end select
-    case('x_coef')
-        select type(model_streamflow => this%model%model_simulation%model_streamflow)
-        type is(Muskingum)
-            dest = c_loc(model_streamflow%x_coef(1))
-            call c_f_pointer(dest, dest_flattened, [n_elements])
-            do i = 1, size(inds)
-                dest_flattened(inds(i)) = src(i)
-            end do
-        end select
     case default
         bmi_status = BMI_FAILURE
     end select
