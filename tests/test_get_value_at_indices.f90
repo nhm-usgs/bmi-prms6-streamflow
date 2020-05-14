@@ -34,10 +34,10 @@ function test1() result(status)
     integer, parameter, dimension(7) :: &
        indices = (/ 2, 4, 6, 8, 10, 12, 14 /)
     real, parameter, dimension(shape(1)) :: &
-         expected = (/ 6.2567892E-04, &
-            4.6067876E-03, 6.0999682E-03, &
-            6.7496800E-04, 2.0469553E-03, &
-            6.5202604E-04, 4.4758637E-03 /)
+         expected = (/ 0.00000000, &
+            0.00000000, 0.00000000, &
+            0.00000000, 0.00000000, &
+            0.00000000, 0.00000000 /)
     real :: tval(size)
     integer :: i, status
     
@@ -66,17 +66,15 @@ function test1() result(status)
 ! Test getting r64 by nhru
     function test2() result(status)
     character (len=*), parameter :: &
-         var_name = "gwres_stor_ante"
+         var_name = "seg_ssflow"
     integer, parameter :: rank =1
-    integer, parameter :: size = 7
-    integer, parameter, dimension(rank) :: shape = (/ 7 /)
+    integer, parameter :: size = 3
+    integer, parameter, dimension(rank) :: shape = (/ 3 /)
     integer, parameter, dimension(size) :: &
-       indices = (/ 2, 4, 6, 8, 10, 12, 14 /)
+       indices = (/ 2, 4, 6 /)
     double precision, parameter, dimension(shape(1)) :: &
-         expected = (/ 1.370599959045649e-002, &
-            0.113049998879433, 0.162882998585701, &
-            1.985199935734272e-002, 4.814099892973900e-002, &
-            1.853399910032749e-002, 0.110981002449989 /)
+         expected = (/ 0.00000000, &
+            0.00000000, 0.00000000 /)
     double precision :: val(size)
     integer :: i, status
     double precision :: endtime
