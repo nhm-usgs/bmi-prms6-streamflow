@@ -143,7 +143,7 @@
     'sroff              ', &
     'strm_seg_in        ', &
             
-    'nowtime' &
+    'nowtime            ' &
     /)
     
 
@@ -630,8 +630,8 @@
         bmi_status = BMI_SUCCESS
     case('flow_out', 'hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'seg_lateral_inflow', &
             'seg_inflow','seg_outflow', 'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', &
-            'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow')
-        type = "double"
+            'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow', 'strm_seg_in')
+        type = "double precision"
         bmi_status = BMI_SUCCESS
     case('segment_order', 'segment_up', 'nowtime')
         type='integer'
@@ -1320,8 +1320,12 @@
 
     select case(name)
     case('strm_seg_in')
-        this%model%model_simulation%runoff%strm_seg_in = src
-        bmi_status = BMI_SUCCESS
+        if(this%model%control_data%cascade_flag%value == 1) then
+            this%model%model_simulation%runoff%strm_seg_in = src
+            bmi_status = BMI_SUCCESS
+        else
+            bmi_status = BMI_FAILURE
+        endif
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1415,15 +1419,18 @@
 
     select case(name)
     case('strm_seg_in')
-        this%model%model_simulation%runoff%strm_seg_in = src
-        dest = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
-        call c_f_pointer(dest, dest_flattened, [n_elements])
-        do i = 1, size(inds)
-            dest_flattened(inds(i)) = src(i)
-        end do
-
-        case default
-        bmi_status = BMI_FAILURE
+        if(this%model%control_data%cascade_flag%value == 1) then
+            dest = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+            status = this%get_var_grid(name, gridid)
+            status = this%get_grid_size(gridid, n_elements)
+            call c_f_pointer(dest, dest_flattened, [n_elements])
+            do i = 1, size(inds)
+                dest_flattened(inds(i)) = src(i)
+            end do
+            bmi_status = BMI_SUCCESS
+        else
+            bmi_status = BMI_FAILURE
+        endif
     end select
     end function prms_set_at_indices_double
 

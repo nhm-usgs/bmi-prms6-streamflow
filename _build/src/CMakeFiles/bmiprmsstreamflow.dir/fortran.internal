@@ -1,0 +1,5 @@
+# The fortran modules provided by this target.
+provides
+ bmif_2_0.mod
+ bmiprmsstreamflow.mod
+ m_prms_streamflow.mod

@@ -3,7 +3,7 @@ module fixtures
   implicit none
 
   character (len=*), parameter :: config_file = 'control.default'
-  character (len=*), parameter :: var_name = "gwres_flow"
+  character (len=*), parameter :: var_name = "potet"
 
   integer :: status
   
