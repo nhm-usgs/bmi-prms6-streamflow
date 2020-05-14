@@ -15,11 +15,10 @@ program irf_test
   integer :: s, i
   double precision :: time, time0, time1
   character (len=BMI_MAX_UNITS_NAME) :: time_units
-    character (len=*), parameter :: control_file = './pipestem/control.simple1'
-  character (len=*), parameter :: control_file1 = './pipestem_surface/control.simple1'
-  character (len=*), parameter :: control_file2 = './pipestem_soil/control.simple1'
-  character (len=*), parameter :: control_file3 = './pipestem_groundwater/control.simple1'
-  character (len=*), parameter :: control_file4 = './pipestem_streamflow/control.simple1'
+  character (len=*), parameter :: control_file1 = 'control_surface.simple1'
+  character (len=*), parameter :: control_file2 = 'control_soil.simple1'
+  character (len=*), parameter :: control_file3 = 'control_groundwater.simple1'
+  character (len=*), parameter :: control_file4 = 'control_streamflow.simple1'
   double precision :: endtime
 
   write (*,"(a)",advance="no") "Initializing..."
@@ -77,11 +76,11 @@ program irf_test
         code = msurf%get_value('sroff', r32var)
         code = mstrm%set_value('sroff', r32var)
 
-        nelem  = getvarsize4(msurf, mstrm, 'strm_seg_in')
-        call allocr64var(r64var, nelem)
-        code = msurf%get_value('strm_seg_in', r64var)
-        code = mstrm%set_value('strm_seg_in', r64var)
-        
+        !nelem  = getvarsize4(msurf, mstrm, 'strm_seg_in')
+        !call allocr64var(r64var, nelem)
+        !code = msurf%get_value('strm_seg_in', r64var)
+        !code = mstrm%set_value('strm_seg_in', r64var)
+        !
         ! single precision from soil
         nelem  = getvarsize5(msoil, mstrm, 'ssres_flow')
         call allocr32var(r32var, nelem)
@@ -172,16 +171,6 @@ program irf_test
         integer :: gridid1,gridid2, nelem, nelem1, nelem2
         
         !double precision
-        nelem  = getvarsize(msurf, msoil, 'basin_sroff')
-        call allocr64var(r64var, nelem)
-        code = msoil%get_value('basin_sroff', r64var)
-        code = msurf%set_value('basin_sroff', r64var)
-        
-        nelem  = getvarsize(msurf, msoil, 'basin_potet')
-        call allocr64var(r64var, nelem)
-        code = msoil%get_value('basin_potet', r64var)
-        code = msurf%set_value('basin_potet', r64var)
-
         !reals
 
         nelem  = getvarsize(msurf, msoil, 'infil')
@@ -214,16 +203,6 @@ program irf_test
         double precision, allocatable, dimension(:) :: r64var
         integer :: code
         integer :: gridid1,gridid2, nelem, nelem1, nelem2
-
-        nelem  = getvarsize(msurf, msoil, 'basin_potet')
-        call allocr64var(r64var, nelem)
-        code = msurf%get_value('basin_potet', r64var)
-        code = msoil%set_value('basin_potet', r64var)
-        
-        nelem  = getvarsize(msurf, msoil, 'basin_sroff')
-        call allocr64var(r64var, nelem)
-        code = msurf%get_value('basin_sroff', r64var)
-        code = msoil%set_value('basin_sroff', r64var)
 
         nelem  = getvarsize(msurf, msoil, 'hru_ppt')
         call allocr32var(r32var, nelem)
@@ -325,11 +304,6 @@ program irf_test
         code = msurf%get_value('srunoff_updated_soil', i32var)
         code = msoil%set_value('srunoff_updated_soil', i32var)
 
-        nelem  = getvarsize(msurf, msoil, 'strm_seg_in')
-        call allocr64var(r64var, nelem)
-        code = msurf%get_value('strm_seg_in', r64var)
-        code = msoil%set_value('strm_seg_in', r64var)
-        
     end function surface2soil
     
     function getvarsize(msurf, msoil, vname) result(size)
