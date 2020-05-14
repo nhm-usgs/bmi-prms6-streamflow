@@ -515,7 +515,8 @@ case default
         bmi_status = BMI_SUCCESS
     case(1:3) 
         z(:) = -1.d0
-        bmi_status = BMI_SUCCESS    case default
+        bmi_status = BMI_SUCCESS    
+    case default
         z(:) = -1.d0
         bmi_status = BMI_FAILURE
     end select
