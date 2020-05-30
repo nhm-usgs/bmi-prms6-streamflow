@@ -324,6 +324,7 @@
         bmi_status = BMI_SUCCESS
     case('flow_out')
         grid = 2
+        bmi_status = BMI_SUCCESS
     case('nowtime')
         grid = 3
         bmi_status = BMI_SUCCESS
@@ -373,7 +374,7 @@
     case(1)
         rank = 1
     case(2)
-        rank = 1
+        rank = 0
     case(3)
         rank = 1
     case default
