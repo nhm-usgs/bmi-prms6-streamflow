@@ -52,5 +52,5 @@ make_test(test_set_value)
 make_test(test_set_value_at_indices)
 
 file(
-  COPY ${CMAKE_SOURCE_DIR}/projects/pipestem_groundwater/
+  COPY ${CMAKE_SOURCE_DIR}/projects/pipestem_streamflow/
   DESTINATION ${CMAKE_BINARY_DIR}/tests)
