@@ -90,8 +90,8 @@
         component_name = "prms6-streamflow-BMI"
 
     ! Exchange items
-    integer, parameter :: input_item_count = 6
-    integer, parameter :: output_item_count = 23
+    integer, parameter :: input_item_count = 5
+    integer, parameter :: output_item_count = 22
     character (len=BMI_MAX_VAR_NAME), target, &
         dimension(input_item_count) :: input_items = (/ &
             
@@ -106,10 +106,9 @@
     ! from soil
     'ssres_flow         ', &
     ! from runoff
-    'sroff              ', &
-    'strm_seg_in        ' &
+    'sroff              ' &
     /)
-
+! 'strm_seg_in        ' &
     character (len=BMI_MAX_VAR_NAME), target, &
         dimension(output_item_count) :: output_items  = (/ &
         ! A list of potential ouputs needs more work once other streamflow 
@@ -141,7 +140,7 @@
     'ssres_flow         ', &
     ! from runoff
     'sroff              ', &
-    'strm_seg_in        ', &
+    ! 'strm_seg_in        ', &
             
     'nowtime            ' &
     /)
@@ -316,10 +315,10 @@
         'hru_outflow')
         grid = 0
         bmi_status = BMI_SUCCESS
-    case('strm_seg_in', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', &
+    case('seg_gwflow', 'seg_sroff', 'seg_ssflow', &
         'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', 'segment_up', &
         'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', 'segment_order', &
-        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow')
+        'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow') ! 'strm_seg_in', 
         grid = 1
         bmi_status = BMI_SUCCESS
     case('flow_out')
@@ -647,7 +646,7 @@ case default
         bmi_status = BMI_SUCCESS
     case('flow_out', 'hru_outflow', 'seg_gwflow', 'seg_sroff', 'seg_ssflow', 'seg_lateral_inflow', &
             'seg_inflow','seg_outflow', 'seg_upstream_inflow', 'seginc_gwflow', 'seginc_sroff', &
-            'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow', 'strm_seg_in')
+            'seginc_ssflow', 'seginc_swrad', 'segment_delta_flow') ! , 'strm_seg_in'
         type = "double precision"
         bmi_status = BMI_SUCCESS
     case('segment_order', 'segment_up', 'nowtime')
@@ -671,16 +670,16 @@ case default
         'seg_gwflow', 'seg_ssflow', 'seg_sroff')
         units = "in"
         bmi_status = BMI_SUCCESS
-    case('strm_seg_in', 'flow_out', &
+    case('flow_out', &
         'hru_outflow', 'seg_lateral_inflow', 'seg_inflow', 'seg_outflow', 'seg_upstream_inflow', &
-        'seginc_gwflow', 'seginc_sroff', 'seginc_ssflow', 'segment_delta_flow')
+        'seginc_gwflow', 'seginc_sroff', 'seginc_ssflow', 'segment_delta_flow') !'strm_seg_in',
         units = "ft3 s-1"
         bmi_status = BMI_SUCCESS
     case('seginc_swrad')
-        units = 'Ly'
+        units = 'langley'
         bmi_status = BMI_SUCCESS
     case('nowtime')
-        units = '-'
+        units = '1'
         bmi_status = BMI_SUCCESS
     case default
         units = "-"
@@ -711,14 +710,14 @@ case default
     case('sroff')
         size = sizeof(this%model%model_simulation%runoff%sroff(1))
         bmi_status = BMI_SUCCESS
-    case('strm_seg_in')
-        if(this%model%control_data%cascade_flag%value == 1) then
-            size = sizeof(this%model%model_simulation%runoff%strm_seg_in(1))
-            bmi_status = BMI_SUCCESS
-        else
-            size = -1
-            bmi_status = BMI_FAILURE
-        endif
+    ! case('strm_seg_in')
+    !     if(this%model%control_data%cascade_flag%value == 1) then
+    !         size = sizeof(this%model%model_simulation%runoff%strm_seg_in(1))
+    !         bmi_status = BMI_SUCCESS
+    !     else
+    !         size = -1
+    !         bmi_status = BMI_FAILURE
+    !     endif
     case('hru_outflow')
         size = sizeof(this%model%model_simulation%model_streamflow%hru_outflow(1))
         bmi_status = BMI_SUCCESS
@@ -915,14 +914,14 @@ case default
     case('segment_delta_flow') 
         dest = [this%model%model_simulation%model_streamflow%segment_delta_flow]
         bmi_status = BMI_SUCCESS
-   case('strm_seg_in')
-        if(this%model%control_data%cascade_flag%value == 1) then
-            dest = [this%model%model_simulation%runoff%strm_seg_in]
-            bmi_status = BMI_SUCCESS
-        else
-            dest = [-1.d0]
-            bmi_status = BMI_FAILURE
-        endif
+!    case('strm_seg_in')
+!         if(this%model%control_data%cascade_flag%value == 1) then
+!             dest = [this%model%model_simulation%runoff%strm_seg_in]
+!             bmi_status = BMI_SUCCESS
+!         else
+!             dest = [-1.d0]
+!             bmi_status = BMI_FAILURE
+!         endif
     case default
         dest = [-1.d0]
         bmi_status = BMI_FAILURE
@@ -1045,14 +1044,14 @@ case default
         src = c_loc(this%model%model_simulation%model_streamflow%segment_delta_flow(1))
         call c_f_pointer(src, dest_ptr, [n_elements])
         bmi_status = BMI_SUCCESS
-   case('strm_seg_in')
-        if(this%model%control_data%cascade_flag%value == 1) then
-            src = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
-            call c_f_pointer(src, dest_ptr, [n_elements])
-            bmi_status = BMI_SUCCESS
-        else
-            bmi_status = BMI_FAILURE
-        endif
+!    case('strm_seg_in')
+!         if(this%model%control_data%cascade_flag%value == 1) then
+!             src = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+!             call c_f_pointer(src, dest_ptr, [n_elements])
+!             bmi_status = BMI_SUCCESS
+!         else
+!             bmi_status = BMI_FAILURE
+!         endif
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1237,17 +1236,17 @@ case default
             dest(i) = src_flattened(inds(i))
         end do
         bmi_status = BMI_SUCCESS
-   case('strm_seg_in')
-        if(this%model%control_data%cascade_flag%value == 1) then
-            src = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
-            call c_f_pointer(src, src_flattened, [n_elements])
-            do i = 1,  size(inds)
-                dest(i) = src_flattened(inds(i))
-            end do
-            bmi_status = BMI_SUCCESS
-        else
-            bmi_status = BMI_FAILURE
-        endif
+!    case('strm_seg_in')
+!         if(this%model%control_data%cascade_flag%value == 1) then
+!             src = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+!             call c_f_pointer(src, src_flattened, [n_elements])
+!             do i = 1,  size(inds)
+!                 dest(i) = src_flattened(inds(i))
+!             end do
+!             bmi_status = BMI_SUCCESS
+!         else
+!             bmi_status = BMI_FAILURE
+!         endif
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1315,13 +1314,13 @@ case default
     integer :: bmi_status
 
     select case(name)
-    case('strm_seg_in')
-        if(this%model%control_data%cascade_flag%value == 1) then
-            this%model%model_simulation%runoff%strm_seg_in = src
-            bmi_status = BMI_SUCCESS
-        else
-            bmi_status = BMI_FAILURE
-        endif
+    ! case('strm_seg_in')
+    !     if(this%model%control_data%cascade_flag%value == 1) then
+    !         this%model%model_simulation%runoff%strm_seg_in = src
+    !         bmi_status = BMI_SUCCESS
+    !     else
+    !         bmi_status = BMI_FAILURE
+    !     endif
     case default
         bmi_status = BMI_FAILURE
     end select
@@ -1414,20 +1413,23 @@ case default
     bmi_status = BMI_SUCCESS
 
     select case(name)
-    case('strm_seg_in')
-        if(this%model%control_data%cascade_flag%value == 1) then
-            dest = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
-            status = this%get_var_grid(name, gridid)
-            status = this%get_grid_size(gridid, n_elements)
-            call c_f_pointer(dest, dest_flattened, [n_elements])
-            do i = 1, size(inds)
-                dest_flattened(inds(i)) = src(i)
-            end do
-            bmi_status = BMI_SUCCESS
-        else
-            bmi_status = BMI_FAILURE
-        endif
+    ! case('strm_seg_in')
+    !     if(this%model%control_data%cascade_flag%value == 1) then
+    !         dest = c_loc(this%model%model_simulation%runoff%strm_seg_in(1))
+    !         status = this%get_var_grid(name, gridid)
+    !         status = this%get_grid_size(gridid, n_elements)
+    !         call c_f_pointer(dest, dest_flattened, [n_elements])
+    !         do i = 1, size(inds)
+    !             dest_flattened(inds(i)) = src(i)
+    !         end do
+    !         bmi_status = BMI_SUCCESS
+    !     else
+    !         bmi_status = BMI_FAILURE
+    !     endif
+    case default
+        bmi_status = BMI_FAILURE
     end select
+
     end function prms_set_at_indices_double
 
     ! A non-BMI procedure for model introspection.
