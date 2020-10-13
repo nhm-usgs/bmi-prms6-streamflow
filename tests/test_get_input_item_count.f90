@@ -6,7 +6,7 @@ program test_get_input_item_count
 
   implicit none
 
-  integer, parameter :: expected = 6
+  integer, parameter :: expected = 5
   type (bmi_prms_streamflow) :: m
   integer :: count
 
